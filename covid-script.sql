@@ -29,28 +29,80 @@
 
 
 
--- 1) chci napojit covid19_basic_differences na lookup_table
--- kontrola proměnné country
-WITH country_diff AS (
-	SELECT country
-	FROM covid19_basic_differences
-	GROUP BY country
-	)
+-- 1) kontrola proměnné country:
 SELECT country
-FROM lookup_table
+FROM covid19_basic_differences
 WHERE country NOT IN (
 	SELECT country
-	FROM country_diff
+	FROM lookup_table
 	)
 GROUP BY country
 ;
+-- v lookup_table nechybí žádná země z covid19_basic_differences 
+SELECT country
+FROM covid19_tests
+WHERE country NOT IN (
+	SELECT country
+	FROM lookup_table
+	)
+GROUP BY country
+;
+-- v lookup_table chybí z covid19_tests:
+/*
+Czech Republic
+Democratic Republic of Congo
+Hong Kong
+Macedonia
+Myanmar
+Palestine
+South Korea
+Taiwan
+United States
+*/
 
--- date
+WITH country_diff AS (
+	SELECT country
+	FROM covid19_tests
+	GROUP BY country)
+SELECT country
+FROM covid19_basic_differences
+WHERE country NOT IN (
+	SELECT country
+	FROM country_diff)
+GROUP BY country
+;
+-- z covid19_basic_differences chybí v covid19_tests 91 zemí
+
+SELECT country
+FROM covid19_tests
+WHERE country NOT IN (
+	SELECT country
+	FROM covid19_basic_differences
+	)
+GROUP BY country
+;
+-- z covid19_tests chybí v covid19_basic_differences 12 zemí
+/*Australia
+Canada
+China
+Czech Republic
+Democratic Republic of Congo
+Hong Kong
+Macedonia
+Myanmar
+Palestine
+South Korea
+Taiwan
+United States
+*/
+
+
+-- 2) kontrola proměnné date
 	-- covid19_basic_differences: 22.1.2020–23.5.2021
 	-- covid_19_tests: 29.1.2020–21.11.2020
 
 
--- tvorba primární tabulky
+-- x) tvorba primární tabulky
 CREATE OR REPLACE TABLE t_adela_prystaszova_projekt_SQL_final
 SELECT country
 FROM 
