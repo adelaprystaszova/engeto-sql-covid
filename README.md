@@ -5,5 +5,5 @@ Dokončeno: xxx
 ## Základní informace  
 Projekt se zaměřuje na vytvoření datových podkladů pro statistickou analýzu hledající závislost výskytu covidu-19 na nezávislých proměnných včetně hustoty zalidnění, HDP na obyvatele, Giniho koeficientu, mediánu věku, průměrné denní teploty a mnoha dalších.
 ## Struktura repozitáře  
-* covid_script.sql: Soubor obsahující SQL skript, který umožňuje z dat v Engeto databázi vytvořit tabulku s veškerými datovými podklady potřebnými pro statistickou analýzu.
-* covid_pruvodni_listina.pdf: Soubor obsahující veškeré informace o projektu, včetně podrobného zadání, popisu vstupních dat a výstupu projektu.
+* __covid_script.sql__: Soubor obsahující SQL skript, který umožňuje z dat v Engeto databázi vytvořit tabulku s veškerými datovými podklady potřebnými pro statistickou analýzu.
+* __covid_pruvodni_listina.pdf__: Soubor obsahující veškeré informace o projektu, včetně podrobného zadání, popisu vstupních dat a výstupu projektu.
