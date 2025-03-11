@@ -90,36 +90,65 @@ SET country =
     ELSE country
 END;
 
+-- c) Vytvoření a úprava tabulky weather2 tak, aby v ní relevantní údaje byly vez jednotek
+CREATE OR REPLACE TABLE weather2
+SELECT *
+FROM weather;
+UPDATE weather2
+SET temp = REPLACE(temp, ' °c', '');
+UPDATE weather2
+SET rain = REPLACE(rain, ' mm', '');
+UPDATE weather2
+SET gust = REPLACE(gust, ' km/h', '');
 
--- TVORBA PRIMÁRNÍ TABULKY
+
+-- TVORBA VÝSLEDNÉ
 /*Napojuji na lookup_table2 na proměnnou country/iso3 tabulky countries,
  * economies, life_expectancy, religion
  */
-CREATE OR REPLACE TABLE t_adela_prystaszova_projekt_SQL_final
-SELECT 
-	lt2.country AS stat, 
-	lt2.iso3 AS iso3,
-	lt2.population AS populace,
-	cou.population_density AS hustota_zalidneni,
-	cou.median_age_2018 AS median_veku_2018,
-	eco.GDP AS GDP_2020 AS HDP_2020,
-	eco.population AS populace_2020,
-	le1965.life_expectancy AS nadeje_doziti_1965,
-	le2015.life_expectancy AS nadeje_doziti_2015,
-	rel.religion,
-	rel.population AS religion_population
-FROM lookup_table2 AS lt2
-LEFT JOIN countries AS cou
-	ON lt2.iso3 = cou.iso3
-LEFT JOIN economies eco
-	ON lt2.country = eco.country
-	WHERE eco.year = '2020'
-LEFT JOIN life_expectancy AS le1965
-	ON lt2.country = le1965.country
-	WHERE le1965.YEAR = '1965'
-LEFT JOIN life_expectancy AS le2015
-	ON lt2.country = le2015.country
-	WHERE le1965.YEAR = '2015'
-RIGHT JOIN religions AS rel
-	ON lt2.country = rel.country
-	WHERE rel.YEAR = '2020'
+WITH pocasi1 AS (
+	SELECT avg(temp)
+	FROM weather2
+	WHERE time NOT IN (00:00, 03:00)
+	GROUP BY date, city),
+pocasi2 AS (
+	SELECT count(rain)
+	FROM weather2
+	WHERE rain > 0
+	GROUP BY date, city),
+pocasi3 AS (
+	SELECT max(gust)
+	FROM weather2
+	GROUP BY date, city)
+
+
+-- je potřeba překodovat rain, temp, gust na čiselne hodnoty, pak napojit
+
+CREATE OR REPLACE TABLE t_adela_prystaszova_projekt_SQL_1
+	SELECT 
+		lt2.country AS stat, 
+		lt2.iso3 AS iso3,
+		lt2.population AS populace,
+		cou.population_density AS hustota_zalidneni,
+		cou.median_age_2018 AS median_veku_2018,
+		eco.GDP AS GDP_2020 AS HDP_2020,
+		eco.population AS populace_2020,
+		le1965.life_expectancy AS nadeje_doziti_1965,
+		le2015.life_expectancy AS nadeje_doziti_2015,
+		rel.religion,
+		rel.population AS religion_population
+	FROM lookup_table2 AS lt2
+	LEFT JOIN countries AS cou
+		ON lt2.iso3 = cou.iso3
+	LEFT JOIN economies eco
+		ON lt2.country = eco.country
+		WHERE eco.year = '2020'
+	LEFT JOIN life_expectancy AS le1965
+		ON lt2.country = le1965.country
+		WHERE le1965.YEAR = '1965'
+	LEFT JOIN life_expectancy AS le2015
+		ON lt2.country = le2015.country
+		WHERE le1965.YEAR = '2015'
+	RIGHT JOIN religions AS rel
+		ON lt2.country = rel.country
+		WHERE rel.YEAR = '2020'
