@@ -78,31 +78,48 @@ WHERE province IS NULL;
 CREATE OR REPLACE TABLE covid19_tests2 AS
 SELECT *
 FROM covid19_tests;
-UPDATE covid19_tests2 
-SET country = 'Czechia'
-WHERE country = 'Czech Republic';
-UPDATE covid19_tests2 
-SET country = 'Congo (Kinshasa)'
-WHERE country = 'Democratic Republic of Congo';
-UPDATE covid19_tests2 
-SET country = 'North Macedonia'
-WHERE country = 'Macedonia';
-UPDATE covid19_tests2 
-SET country = 'Burma'
-WHERE country = 'Myanmar';
-UPDATE covid19_tests2 
-SET country = 'Korea, South'
-WHERE country = 'South Korea';
-UPDATE covid19_tests2 
-SET country = 'Taiwan*'
-WHERE country = 'Taiwan';
-UPDATE covid19_tests2 
-SET country = 'US'
-WHERE country = 'United States';
--- dokončit
+UPDATE covid19_tests2
+SET country = 
+	CASE WHEN country = 'Czech Republic' THEN 'Czechia'
+    WHEN country = 'Democratic Republic of Congo' THEN 'Congo (Kinshasa)'
+    WHEN country = 'Macedonia' THEN 'North Macedonia'
+    WHEN country = 'Myanmar' THEN 'Burma'
+    WHEN country = 'South Korea' THEN 'Korea, South'
+    WHEN country = 'Taiwan' THEN 'Taiwan*'
+    WHEN country = 'United States' THEN 'US'
+    ELSE country
+END;
 
 
 -- TVORBA PRIMÁRNÍ TABULKY
+/*Napojuji na lookup_table2 na proměnnou country/iso3 tabulky countries,
+ * economies, life_expectancy, religion
+ */
 CREATE OR REPLACE TABLE t_adela_prystaszova_projekt_SQL_final
-SELECT country
-FROM 
+SELECT 
+	lt2.country AS stat, 
+	lt2.iso3 AS iso3,
+	lt2.population AS populace,
+	cou.population_density AS hustota_zalidneni,
+	cou.median_age_2018 AS median_veku_2018,
+	eco.GDP AS GDP_2020 AS HDP_2020,
+	eco.population AS populace_2020,
+	le1965.life_expectancy AS nadeje_doziti_1965,
+	le2015.life_expectancy AS nadeje_doziti_2015,
+	rel.religion,
+	rel.population AS religion_population
+FROM lookup_table2 AS lt2
+LEFT JOIN countries AS cou
+	ON lt2.iso3 = cou.iso3
+LEFT JOIN economies eco
+	ON lt2.country = eco.country
+	WHERE eco.year = '2020'
+LEFT JOIN life_expectancy AS le1965
+	ON lt2.country = le1965.country
+	WHERE le1965.YEAR = '1965'
+LEFT JOIN life_expectancy AS le2015
+	ON lt2.country = le2015.country
+	WHERE le1965.YEAR = '2015'
+RIGHT JOIN religions AS rel
+	ON lt2.country = rel.country
+	WHERE rel.YEAR = '2020'
