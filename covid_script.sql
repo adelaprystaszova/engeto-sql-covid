@@ -90,7 +90,7 @@ SET country =
     ELSE country
 END;
 
--- c) Vytvoření a úprava tabulky weather2 tak, aby v ní relevantní údaje byly vez jednotek
+-- c) Vytvoření a úprava tabulky weather2 tak, aby v ní relevantní údaje byly bez jednotek a správného typu
 CREATE OR REPLACE TABLE weather2
 SELECT *
 FROM weather;
@@ -100,34 +100,23 @@ UPDATE weather2
 SET rain = REPLACE(rain, ' mm', '');
 UPDATE weather2
 SET gust = REPLACE(gust, ' km/h', '');
+ALTER TABLE weather2 MODIFY COLUMN `time` TIME DEFAULT NULL NULL;
+ALTER TABLE weather2 MODIFY COLUMN temp INTEGER DEFAULT NULL NULL;
+ALTER TABLE weather2 MODIFY COLUMN gust INTEGER DEFAULT NULL NULL;
+ALTER TABLE weather2 MODIFY COLUMN rain FLOAT DEFAULT NULL NULL;
 
 
--- TVORBA VÝSLEDNÉ
+
+-- TVORBA VÝSLEDNÉ TABULKY
 /*Napojuji na lookup_table2 na proměnnou country/iso3 tabulky countries,
- * economies, life_expectancy, religion
+ * economies, life_expectancy, religion, weather2 (pomocí CTE)
  */
-WITH pocasi1 AS (
-	SELECT avg(temp)
-	FROM weather2
-	WHERE time NOT IN (00:00, 03:00)
-	GROUP BY date, city),
-pocasi2 AS (
-	SELECT count(rain)
-	FROM weather2
-	WHERE rain > 0
-	GROUP BY date, city),
-pocasi3 AS (
-	SELECT max(gust)
-	FROM weather2
-	GROUP BY date, city)
 
-
--- je potřeba překodovat rain, temp, gust na čiselne hodnoty, pak napojit
-
-CREATE OR REPLACE TABLE t_adela_prystaszova_projekt_SQL_1
+CREATE OR REPLACE TABLE t1
 	SELECT 
 		lt2.country AS stat, 
 		lt2.iso3 AS iso3,
+		cou.capital_city AS hlavni_mesto,
 		lt2.population AS populace,
 		cou.population_density AS hustota_zalidneni,
 		cou.median_age_2018 AS median_veku_2018,
@@ -152,3 +141,27 @@ CREATE OR REPLACE TABLE t_adela_prystaszova_projekt_SQL_1
 	RIGHT JOIN religions AS rel
 		ON lt2.country = rel.country
 		WHERE rel.YEAR = '2020'
+		
+		
+		
+		
+		
+		
+WITH pocasi1 AS (
+	SELECT date, city, avg(temp) AS prumerna_denni_teplota
+	FROM weather2
+	WHERE time NOT IN (00:00:00, 03:00:00)
+	GROUP BY date, city),
+pocasi2 AS (
+	SELECT date, city, count(rain) AS hodiny_s_destem
+	FROM weather2
+	WHERE rain > 0
+	GROUP BY date, city),
+pocasi3 AS (
+	SELECT date, city, max(gust) AS max_naraz_vitr
+	FROM weather2
+	GROUP BY date, city)
+
+	
+	LEFT JOIN pocasi1
+		ON cou.capital_city = pocasi1.city
