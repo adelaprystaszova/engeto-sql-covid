@@ -1,36 +1,6 @@
-/* Vytvoření primární tabulky t_adela_prystaszova_projekt_SQL_final
-* klíče: country, date
-* vysvětlované proměnné: 
- * počet nově nakažených na 100 000 obyvatel
-	 * = počet nově nakažených/počet obyvatel*100 000
- * podíl pozitivních testů
-	 * = počet nově nakažených/počet testovaných
-* vysvětlující proměnné:
- * 	časové
-	 * víkend/pracovní den (binární)
-	 * roční období (0–3)
- * 	specifické pro stát
-	 * hustota zalidnění
-	 * HDP/obyv.
-	 * Giniho koeficient
-	 * dětská úmrtnost
-	 * medián věku 2018
-	 * podíl každého náboženství na obyvatelstvu
-	 * rozdíl naděje dožití ve věku 0 mezi 1965 a 2015
- * 	počasí
-	 * průměrná denní teplota
-	 * počet hodin s nenulovými srážkami v daném dni
-	 * max. síla větru v nárazech v daném dni
-* využité tabulky: countries, economies, life_expectancy, 
-* religions, covid19_basic_differences, covid19_tests, 
-* weather, lookup_table
-*/
-
-
 -- 1) KONTROLA PROMĚNNÝCH
 
--- a) kontrola proměnné country, pomocí které budu napojovat tabulky na tabulky lookup_table
--- lookup_table x covid19_basic_differences:
+-- a) kontrola proměnné country, pomocí které budu napojovat tabulky na tabulku lookup_table
 SELECT country
 FROM covid19_basic_differences
 WHERE country NOT IN (
@@ -81,7 +51,6 @@ HAVING country IN (
 	HAVING count(DISTINCT entity) > 1)
 ORDER BY country;
 -- u každé země kromě osmi je jen jedna hodnota entity, u těch 8 je níž upraveno
-
 
 -- ÚPRAVA TABULEK
 
@@ -141,22 +110,6 @@ WHERE
 
 
 -- TVORBA VÝSLEDNÉ TABULKY
-
--- rozlozeno na casti
-CREATE OR REPLACE VIEW pocasi1 AS
-	SELECT date, city, avg(temp) AS prumerna_denni_teplota
-	FROM weather2
-	WHERE time NOT IN ('00:00:00', '03:00:00')
-	GROUP BY date, city;
-CREATE OR REPLACE VIEW pocasi2 AS
-	SELECT date, city, count(rain) AS hodiny_s_destem
-	FROM weather2
-	WHERE rain > 0
-	GROUP BY date, city;
-CREATE OR REPLACE VIEW pocasi3 AS
-	SELECT date, city, max(gust) AS max_naraz_vitr
-	FROM weather2
-	GROUP BY date, city;
 CREATE OR REPLACE VIEW v1 AS
 	SELECT 
 		lt2.country AS stat, 
@@ -182,6 +135,7 @@ CREATE OR REPLACE VIEW v1 AS
 	LEFT JOIN life_expectancy AS le2015
 		ON lt2.country = le2015.country
 		AND le2015.year = '2015';
+
 CREATE OR REPLACE VIEW v2 AS 
 	SELECT 
 		v1.*,	
@@ -196,7 +150,23 @@ CREATE OR REPLACE VIEW v2 AS
 		ON v1.stat = rel.country
 		AND rel.year = '2020'
 	RIGHT JOIN covid19_basic_differences AS cbd
-		ON v1.stat = cbd.country;	
+		ON v1.stat = cbd.country;
+
+CREATE OR REPLACE VIEW pocasi1 AS
+	SELECT date, city, avg(temp) AS prumerna_denni_teplota
+	FROM weather2
+	WHERE time NOT IN ('00:00:00', '03:00:00')
+	GROUP BY date, city;
+CREATE OR REPLACE VIEW pocasi2 AS
+	SELECT date, city, count(rain) AS hodiny_s_destem
+	FROM weather2
+	WHERE rain > 0
+	GROUP BY date, city;
+CREATE OR REPLACE VIEW pocasi3 AS
+	SELECT date, city, max(gust) AS max_naraz_vitr
+	FROM weather2
+	GROUP BY date, city;
+
 CREATE OR REPLACE VIEW v3 AS
 	SELECT
 		v2.*,
@@ -212,11 +182,12 @@ LEFT JOIN pocasi1 AS po1
 	ON v2.hlavni_mesto = po1.city
 	AND v2.datum = po1.date
 LEFT JOIN pocasi2 AS po2
-	ON v2.hlavni_mesto = po1.city
-	AND v2.datum = po1.date
+	ON v2.hlavni_mesto = po2.city
+	AND v2.datum = po2.date
 LEFT JOIN pocasi3 AS po3
-	ON v2.hlavni_mesto = po1.city
-	AND v2.datum = po1.date;
+	ON v2.hlavni_mesto = po3.city
+	AND v2.datum = po3.date;
+
 CREATE OR REPLACE TABLE t_adela_prystaszova_projekt_SQL_final AS
 SELECT 
 	stat,
