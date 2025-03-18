@@ -65,6 +65,23 @@ United States (v lookup_table jako US)
 	-- covid19_basic_differences: 22.1.2020–23.5.2021
 	-- covid_19_tests: 29.1.2020–21.11.2020
 
+-- kontrola proměnné entity v covid19_tests;
+SELECT country, entity, count(entity) AS počet
+FROM covid19_tests
+GROUP BY country, entity
+ORDER BY country;
+-- u zemí jsou různé hodnoty entity, většinou ale u jedné země pouze jedna
+SELECT country, entity, count(entity) AS počet
+FROM covid19_tests
+GROUP BY country, entity
+HAVING country IN (
+	SELECT country
+	FROM covid19_tests
+	GROUP BY country
+	HAVING count(DISTINCT entity) > 1)
+ORDER BY country;
+-- u každé země kromě osmi je jen jedna hodnota entity, u těch 8 je níž upraveno
+
 
 -- ÚPRAVA TABULEK
 
@@ -106,6 +123,22 @@ ALTER TABLE weather2 MODIFY COLUMN gust INTEGER DEFAULT NULL NULL;
 ALTER TABLE weather2 MODIFY COLUMN rain FLOAT DEFAULT NULL NULL;
 ALTER TABLE weather2 MODIFY COLUMN `date` DATE DEFAULT NULL NULL;
 
+-- d) vytvoření a úprava tabulky covid19_tests2 obsahující jen jednu hodnotu entity
+CREATE OR REPLACE TABLE covid19_tests2
+SELECT *
+FROM covid19_tests;
+DELETE FROM covid19_tests2
+WHERE 
+	(country = "France" AND entity = "people tested")
+	OR (country = "India" AND entity = "people tested")
+	OR (country = "Italy" AND entity = "people tested")
+	OR (country = "Japan" AND entity = "people tested (incl. non-PCR)")
+	OR (country = "Poland" AND entity = "people tested")
+	OR (country = "Singapore" AND entity = "people tested")
+	OR (country = "Sweden" AND entity = "people tested")
+	OR (country = "United States" AND entity = "units unclear (incl. non-PCR)")
+;
+
 
 -- TVORBA VÝSLEDNÉ TABULKY
 /*Napojuji na lookup_table2 na proměnnou country/iso3 tabulky countries,
@@ -116,16 +149,19 @@ CREATE OR REPLACE TABLE t1
 	SELECT 
 		lt2.country AS stat, 
 		lt2.iso3 AS iso3,
+		cbd.date AS datum,
 		cou.capital_city AS hlavni_mesto,
 		lt2.population AS populace,
 		cou.population_density AS hustota_zalidneni,
 		cou.median_age_2018 AS median_veku_2018,
-		eco.GDP AS GDP_2020 AS HDP_2020,
+		eco.GDP AS HDP_2020,
 		eco.population AS populace_2020,
 		le1965.life_expectancy AS nadeje_doziti_1965,
 		le2015.life_expectancy AS nadeje_doziti_2015,
-		rel.religion,
-		rel.population AS religion_population
+		rel.religion AS nabozenstvi,
+		rel.population AS nabozenstvi_populace,
+		cbd.confirmed AS pocet_novych_pripadu,
+		ct.tests_performed AS pocet_testu
 	FROM lookup_table2 AS lt2
 	LEFT JOIN countries AS cou
 		ON lt2.iso3 = cou.iso3
@@ -134,15 +170,18 @@ CREATE OR REPLACE TABLE t1
 		WHERE eco.year = '2020'
 	LEFT JOIN life_expectancy AS le1965
 		ON lt2.country = le1965.country
-		WHERE le1965.YEAR = '1965'
+		WHERE le1965.year = '1965'
 	LEFT JOIN life_expectancy AS le2015
 		ON lt2.country = le2015.country
-		WHERE le1965.YEAR = '2015'
+		WHERE le1965.year = '2015'
 	RIGHT JOIN religions AS rel
 		ON lt2.country = rel.country
-		WHERE rel.YEAR = '2020'
+		WHERE rel.year = '2020'
 	RIGHT JOIN covid19_basic_differences AS cbd
-		ON lt.country = cbd.country
+		ON lt2.country = cbd.country
+	LEFT JOIN covid19_tests2 AS ct
+		ON lt2.iso3 = ct.iso
+		AND cbd.date = ct.date;
 		
 		
 		
