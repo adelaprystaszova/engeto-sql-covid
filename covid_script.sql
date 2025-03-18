@@ -129,68 +129,24 @@ SELECT *
 FROM covid19_tests;
 DELETE FROM covid19_tests2
 WHERE 
-	(country = "France" AND entity = "people tested")
-	OR (country = "India" AND entity = "people tested")
-	OR (country = "Italy" AND entity = "people tested")
-	OR (country = "Japan" AND entity = "people tested (incl. non-PCR)")
-	OR (country = "Poland" AND entity = "people tested")
-	OR (country = "Singapore" AND entity = "people tested")
-	OR (country = "Sweden" AND entity = "people tested")
-	OR (country = "United States" AND entity = "units unclear (incl. non-PCR)")
+	(country = 'France' AND entity = 'people tested')
+	OR (country = 'India' AND entity = 'people tested')
+	OR (country = 'Italy' AND entity = 'people tested')
+	OR (country = 'Japan' AND entity = 'people tested (incl. non-PCR)')
+	OR (country = 'Poland' AND entity = 'people tested')
+	OR (country = 'Singapore' AND entity = 'people tested')
+	OR (country = 'Sweden' AND entity = 'people tested')
+	OR (country = 'United States' AND entity = 'units unclear (incl. non-PCR)')
 ;
 
 
 -- TVORBA VÝSLEDNÉ TABULKY
-/*Napojuji na lookup_table2 na proměnnou country/iso3 tabulky countries,
- * economies, life_expectancy, religion, weather2 (pomocí CTE)
- */
 
 CREATE OR REPLACE TABLE t1
-	SELECT 
-		lt2.country AS stat, 
-		lt2.iso3 AS iso3,
-		cbd.date AS datum,
-		cou.capital_city AS hlavni_mesto,
-		lt2.population AS populace,
-		cou.population_density AS hustota_zalidneni,
-		cou.median_age_2018 AS median_veku_2018,
-		eco.GDP AS HDP_2020,
-		eco.population AS populace_2020,
-		le1965.life_expectancy AS nadeje_doziti_1965,
-		le2015.life_expectancy AS nadeje_doziti_2015,
-		rel.religion AS nabozenstvi,
-		rel.population AS nabozenstvi_populace,
-		cbd.confirmed AS pocet_novych_pripadu,
-		ct.tests_performed AS pocet_testu
-	FROM lookup_table2 AS lt2
-	LEFT JOIN countries AS cou
-		ON lt2.iso3 = cou.iso3
-	LEFT JOIN economies eco
-		ON lt2.country = eco.country
-		WHERE eco.year = '2020'
-	LEFT JOIN life_expectancy AS le1965
-		ON lt2.country = le1965.country
-		WHERE le1965.year = '1965'
-	LEFT JOIN life_expectancy AS le2015
-		ON lt2.country = le2015.country
-		WHERE le1965.year = '2015'
-	RIGHT JOIN religions AS rel
-		ON lt2.country = rel.country
-		WHERE rel.year = '2020'
-	RIGHT JOIN covid19_basic_differences AS cbd
-		ON lt2.country = cbd.country
-	LEFT JOIN covid19_tests2 AS ct
-		ON lt2.iso3 = ct.iso
-		AND cbd.date = ct.date;
-		
-		
-		
-		
-		
 WITH pocasi1 AS (
 	SELECT date, city, avg(temp) AS prumerna_denni_teplota
 	FROM weather2
-	WHERE time NOT IN (00:00:00, 03:00:00)
+	WHERE time NOT IN ('00:00:00', '03:00:00')
 	GROUP BY date, city),
 pocasi2 AS (
 	SELECT date, city, count(rain) AS hodiny_s_destem
@@ -201,7 +157,82 @@ pocasi3 AS (
 	SELECT date, city, max(gust) AS max_naraz_vitr
 	FROM weather2
 	GROUP BY date, city)
-
+SELECT 
+	lt2.country AS stat, 
+	cbd.date AS datum,
+	dayofweek(cbd.date) AS den_v_tydnu,
+	MONTH(cbd.date) AS mesic, 
+	eco.population AS populace_2020,
+	cou.population_density AS hustota_zalidneni,
+	eco.GDP AS HDP_2020,
+	eco.gini AS giniho_koeficient,
+	eco.mortaliy_under5 AS detska_umrtnost,
+	cou.median_age_2018 AS median_veku_2018,
+	le1965.life_expectancy AS nadeje_doziti_1965,
+	le2015.life_expectancy AS nadeje_doziti_2015,
+	rel.religion AS nabozenstvi,
+	rel.population AS nabozenstvi_populace,
+	po1.prumerna_denni_teplota,
+	po2.hodiny_s_destem AS pocet_h_s_destem,
+	po3.max_naraz_vitr,
+	cbd.confirmed AS pocet_novych_pripadu,
+	ct2.tests_performed AS pocet_testu
+FROM lookup_table2 AS lt2
+LEFT JOIN countries AS cou
+	ON lt2.iso3 = cou.iso3
+LEFT JOIN economies eco
+	ON lt2.country = eco.country
+	and eco.year = '2020'
+LEFT JOIN life_expectancy AS le1965
+	ON lt2.country = le1965.country
+LEFT JOIN life_expectancy AS le2015
+	ON lt2.country = le2015.country
+	AND le2015.year = '2015'
+RIGHT JOIN religions AS rel
+	ON lt2.country = rel.country
+	AND rel.year = '2020'
+RIGHT JOIN covid19_basic_differences AS cbd
+	ON lt2.country = cbd.country
+LEFT JOIN covid19_tests2 AS ct2
+	ON lt2.iso3 = ct2.iso
+	AND cbd.date = ct2.date
+LEFT JOIN pocasi1 AS po1
+	ON cou.capital_city = po1.city
+	AND cbd.date = po1.date
+LEFT JOIN pocasi2 AS po2
+	ON cou.capital_city = po2.city
+	AND cbd.date = po2.date
+LEFT JOIN pocasi3 AS po3
+	ON cou.capital_city = po3.city
+	AND cbd.date = po3.date;
 	
-	LEFT JOIN pocasi1
-		ON cou.capital_city = pocasi1.city
+CREATE OR REPLACE TABLE t_adela_prystaszova_projekt_SQL_final AS
+SELECT 
+	stat,
+	datum,
+	pocet_novych_pripadu/populace_2020 AS mira_incidence,
+	pocet_novych_pripadu/pocet_testu AS nove_pripady_ku_testum
+	CASE WHEN den_v_tydnu IN (5,6) THEN 1 ELSE 0 END AS vikend,
+	CASE WHEN mesic IN (3,4,5) THEN '0'
+		WHEN mesic IN (6,7,8) them '1'
+		WHEN mesic IN (9,10,11) THEN '2'
+		ELSE '3'
+		END AS rocni_obdobi,
+	hustota_zalidneni,
+	HDP_2020/populace_2020 AS hdp_obyv_2020,
+	giniho_koeficient,
+	detska_umrtnost,
+	nabozenstvi,
+	(nabozenstvi_populace/populace_2020)*100 AS podil_nabozenstvi,
+	nadeje_doziti_2015 - nadeje_doziti_1965 AS rozdil_e0_1965_2015,
+	prumerna_denni_teplota,
+	pocet_h_s_destem,
+	max_naraz_vitr
+FROM t1
+
+		
+		
+		
+		
+
+
