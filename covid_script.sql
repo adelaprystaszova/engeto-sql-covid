@@ -1,6 +1,7 @@
 -- 1) KONTROLA PROMĚNNÝCH
 
 -- a) kontrola proměnné country, pomocí které budu napojovat tabulky na tabulku lookup_table
+-- lookup_table x covid19_basic_differences:
 SELECT country
 FROM covid19_basic_differences
 WHERE country NOT IN (
@@ -17,25 +18,10 @@ WHERE country NOT IN (
 	FROM lookup_table
 	)
 GROUP BY country;
--- v lookup_table chybí z covid19_tests:
-/*
-Czech Republic (v lookup_table jako Czechia)
-Democratic Republic of Congo (v lookup_table jako Congo (Kinshasa))
-Hong Kong (v lookup_table jako -)
-Macedonia (v lookup_table jako North Macedonia)
-Myanmar (v lookup_table jako Burma)
-Palestine (v lookup_table jako -)
-South Korea (v lookup_table jako Korea, South)
-Taiwan (v lookup_table jako Taiwan*)
-United States (v lookup_table jako US)
-*/
+-- v lookup_table chybí z covid19_tests 9 zemí, 7 z nich se vyskytuje pod jiným názvem
 -- ostatní tabulky lze spolehlivě napojit přes název státu, případně přes kód ISO/ISO3
 
--- b) kontrola proměnné date
-	-- covid19_basic_differences: 22.1.2020–23.5.2021
-	-- covid_19_tests: 29.1.2020–21.11.2020
-
--- kontrola proměnné entity v covid19_tests;
+-- b) kontrola proměnné entity v covid19_tests;
 SELECT country, entity, count(entity) AS počet
 FROM covid19_tests
 GROUP BY country, entity
@@ -50,7 +36,8 @@ HAVING country IN (
 	GROUP BY country
 	HAVING count(DISTINCT entity) > 1)
 ORDER BY country;
--- u každé země kromě osmi je jen jedna hodnota entity, u těch 8 je níž upraveno
+-- 8 zemí, u kterých je více než jedna hodnota entity
+
 
 -- ÚPRAVA TABULEK
 
@@ -75,8 +62,19 @@ SET country =
     WHEN country = 'United States' THEN 'US'
     ELSE country
 END;
+DELETE FROM covid19_tests2
+WHERE 
+	(country = 'France' AND entity = 'people tested')
+	OR (country = 'India' AND entity = 'people tested')
+	OR (country = 'Italy' AND entity = 'people tested')
+	OR (country = 'Japan' AND entity = 'people tested (incl. non-PCR)')
+	OR (country = 'Poland' AND entity = 'people tested')
+	OR (country = 'Singapore' AND entity = 'people tested')
+	OR (country = 'Sweden' AND entity = 'people tested')
+	OR (country = 'United States' AND entity = 'units unclear (incl. non-PCR)')
+;
 
--- c) Vytvoření a úprava tabulky weather2 tak, aby v ní relevantní údaje byly bez jednotek a správného typu
+-- c) vytvoření a úprava tabulky weather2 tak, aby v ní relevantní údaje byly bez jednotek a správného typu
 CREATE OR REPLACE TABLE weather2
 SELECT *
 FROM weather;
@@ -91,22 +89,6 @@ ALTER TABLE weather2 MODIFY COLUMN temp INTEGER DEFAULT NULL NULL;
 ALTER TABLE weather2 MODIFY COLUMN gust INTEGER DEFAULT NULL NULL;
 ALTER TABLE weather2 MODIFY COLUMN rain FLOAT DEFAULT NULL NULL;
 ALTER TABLE weather2 MODIFY COLUMN `date` DATE DEFAULT NULL NULL;
-
--- d) vytvoření a úprava tabulky covid19_tests2 obsahující jen jednu hodnotu entity
-CREATE OR REPLACE TABLE covid19_tests2
-SELECT *
-FROM covid19_tests;
-DELETE FROM covid19_tests2
-WHERE 
-	(country = 'France' AND entity = 'people tested')
-	OR (country = 'India' AND entity = 'people tested')
-	OR (country = 'Italy' AND entity = 'people tested')
-	OR (country = 'Japan' AND entity = 'people tested (incl. non-PCR)')
-	OR (country = 'Poland' AND entity = 'people tested')
-	OR (country = 'Singapore' AND entity = 'people tested')
-	OR (country = 'Sweden' AND entity = 'people tested')
-	OR (country = 'United States' AND entity = 'units unclear (incl. non-PCR)')
-;
 
 
 -- TVORBA VÝSLEDNÉ TABULKY
