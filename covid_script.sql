@@ -99,9 +99,9 @@ CREATE OR REPLACE VIEW v1 AS
 		cou.capital_city AS hlavni_mesto,
 		eco.population AS populace_2019,
 		cou.population_density AS hustota_zalidneni,
-		eco.GDP AS HDP_2020,
-		eco.gini AS giniho_koeficient,
-		eco.mortaliy_under5 AS detska_umrtnost,
+		eco.GDP AS HDP_2019,
+		eco.gini AS giniho_koeficient_2019,
+		eco.mortaliy_under5 AS detska_umrtnost_2019,
 		cou.median_age_2018 AS median_veku_2018,
 		le1965.life_expectancy AS nadeje_doziti_1965,
 		le2015.life_expectancy AS nadeje_doziti_2015
@@ -140,7 +140,7 @@ CREATE OR REPLACE VIEW pocasi1 AS
 	WHERE time NOT IN ('00:00:00', '03:00:00')
 	GROUP BY date, city;
 CREATE OR REPLACE VIEW pocasi2 AS
-	SELECT date, city, count(rain) AS hodiny_s_destem
+	SELECT date, city, count(rain) AS pocet_h_s_destem
 	FROM weather2
 	WHERE rain > 0
 	GROUP BY date, city;
@@ -154,7 +154,7 @@ CREATE OR REPLACE VIEW v3 AS
 		v2.*,
 		ct2.tests_performed AS pocet_testu,
 		po1.prumerna_denni_teplota,
-		po2.hodiny_s_destem AS pocet_h_s_destem,
+		po2.pocet_h_s_destem,
 		po3.max_naraz_vitr
 	FROM v2
 LEFT JOIN covid19_tests2 AS ct2
@@ -183,9 +183,9 @@ SELECT
 		ELSE '3'
 		END AS rocni_obdobi,
 	hustota_zalidneni,
-	HDP_2020/populace_2019 AS hdp_obyv_2020,
-	giniho_koeficient,
-	detska_umrtnost,
+	HDP_2019/populace_2019 AS hdp_obyv_2019,
+	giniho_koeficient_2019,
+	detska_umrtnost_2019,
 	nabozenstvi,
 	(nabozenstvi_populace/populace_2019)*100 AS podil_nabozenstvi,
 	nadeje_doziti_2015 - nadeje_doziti_1965 AS rozdil_e0_1965_2015,
