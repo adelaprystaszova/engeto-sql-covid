@@ -39,7 +39,7 @@ ORDER BY country;
 -- 8 zemí, u kterých je více než jedna hodnota entity
 
 
--- ÚPRAVA TABULEK
+-- 2) ÚPRAVA TABULEK
 
 -- a) vytvoření tabulky lookup_table2 pouze za státy, ne za provincie:
 CREATE OR REPLACE TABLE lookup_table2 AS 
@@ -91,7 +91,9 @@ ALTER TABLE weather2 MODIFY COLUMN rain FLOAT DEFAULT NULL NULL;
 ALTER TABLE weather2 MODIFY COLUMN `date` DATE DEFAULT NULL NULL;
 
 
--- TVORBA VÝSLEDNÉ TABULKY
+-- 3) TVORBA VÝSLEDNÉ TABULKY
+
+-- a)
 CREATE OR REPLACE VIEW v1 AS
 	SELECT 
 		lt2.country AS stat, 
@@ -118,6 +120,7 @@ CREATE OR REPLACE VIEW v1 AS
 		ON lt2.country = le2015.country
 		AND le2015.year = '2015';
 
+-- b)
 CREATE OR REPLACE VIEW v2 AS 
 	SELECT 
 		v1.*,	
@@ -134,6 +137,7 @@ CREATE OR REPLACE VIEW v2 AS
 	RIGHT JOIN covid19_basic_differences AS cbd
 		ON v1.stat = cbd.country;
 
+-- c)
 CREATE OR REPLACE VIEW pocasi1 AS
 	SELECT date, city, avg(temp) AS prumerna_denni_teplota
 	FROM weather2
@@ -149,6 +153,7 @@ CREATE OR REPLACE VIEW pocasi3 AS
 	FROM weather2
 	GROUP BY date, city;
 
+-- d)
 CREATE OR REPLACE VIEW v3 AS
 	SELECT
 		v2.*,
@@ -170,6 +175,7 @@ LEFT JOIN pocasi3 AS po3
 	ON v2.hlavni_mesto = po3.city
 	AND v2.datum = po3.date;
 
+-- e)
 CREATE OR REPLACE TABLE t_adela_prystaszova_projekt_SQL_final AS
 SELECT 
 	stat,
